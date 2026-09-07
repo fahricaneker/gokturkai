@@ -1,4 +1,4 @@
-# Göktürk
+# Göktürk 0.2 — Kişisel Asistan
 
 Türkçe yapay zekâ sohbet uygulamasının ilk sürümü. Android istemcisi Kotlin/Jetpack Compose, çevrimiçi yapay zekâ katmanı Python/FastAPI ve konuşma saklama katmanı Firebase için hazırlanmıştır.
 
@@ -7,6 +7,8 @@ Türkçe yapay zekâ sohbet uygulamasının ilk sürümü. Android istemcisi Kot
 - Turkuaz, lacivert ve altın renkli modern arayüz
 - Sohbet arka planında yarı şeffaf Selçuklu yıldızı motifleri
 - Türkçe sohbet ve metinden görsel üretme
+- Parmak izi, yüz veya cihaz kilidiyle sahibine özel açılış
+- Türkçe sesle komut ve sesli yanıt
 - Firebase hazır olduğunda anonim kullanıcı ve Firestore sohbet kaydı
 - API anahtarını APK içine koymayan Python ara sunucusu
 - GitHub Actions ile otomatik debug APK üretimi

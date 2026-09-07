@@ -1,8 +1,17 @@
 package com.gokturk.ai
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -39,10 +51,43 @@ private val Turquoise = Color(0xFF25C6B7)
 private val Gold = Color(0xFFD7AF58)
 private val Cream = Color(0xFFF4F1E8)
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { GokturkTheme { GokturkApp() } }
+        setContent {
+            GokturkTheme {
+                var unlocked by remember { mutableStateOf(false) }
+                if (unlocked) GokturkApp() else OwnerLock { authenticate { unlocked = true } }
+                LaunchedEffect(Unit) { authenticate { unlocked = true } }
+            }
+        }
+    }
+
+    private fun authenticate(success: () -> Unit) {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        if (BiometricManager.from(this).canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) return
+        val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { success() }
+        })
+        prompt.authenticate(
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Göktürk sahibi doğrulaması")
+                .setSubtitle("Devam etmek için parmak izi, yüz veya ekran kilidini kullan")
+                .setAllowedAuthenticators(authenticators)
+                .build()
+        )
+    }
+}
+
+@Composable
+private fun OwnerLock(unlock: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(DeepNavy).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Surface(Modifier.size(92.dp), shape = CircleShape, color = Turquoise) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Lock, null, tint = Navy, modifier = Modifier.size(42.dp)) } }
+        Spacer(Modifier.height(24.dp))
+        Text("GÖKTÜRK", color = Cream, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, letterSpacing = 3.sp)
+        Text("Yalnızca sahibine özel", color = Gold)
+        Spacer(Modifier.height(28.dp))
+        Button(onClick = unlock, colors = ButtonDefaults.buttonColors(containerColor = Turquoise, contentColor = Navy)) { Text("Kimliğimi doğrula") }
     }
 }
 
@@ -65,6 +110,27 @@ private fun GokturkApp() {
     var imageMode by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    var ttsReady by remember { mutableStateOf(false) }
+    val tts = remember {
+        TextToSpeech(App.instance) { status -> ttsReady = status == TextToSpeech.SUCCESS }
+    }
+    DisposableEffect(Unit) {
+        tts.language = Locale("tr", "TR")
+        onDispose { tts.stop(); tts.shutdown() }
+    }
+    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            prompt = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
+        }
+    }
+    fun listen() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Göktürk dinliyor...")
+        }
+        voiceLauncher.launch(intent)
+    }
 
     fun submit() {
         val text = prompt.trim()
@@ -85,6 +151,7 @@ private fun GokturkApp() {
             }
             messages += answer
             repo.save(answer)
+            if (ttsReady && answer.imageUrl == null) tts.speak(answer.content, TextToSpeech.QUEUE_FLUSH, null, answer.id)
             working = false
             listState.animateScrollToItem(messages.lastIndex)
         }
@@ -103,7 +170,7 @@ private fun GokturkApp() {
                 items(messages, key = { it.id }) { MessageBubble(it) }
                 if (working) item { LinearProgressIndicator(Modifier.width(96.dp), color = Turquoise, trackColor = Navy) }
             }
-            PromptBar(prompt, imageMode, working, { prompt = it }, ::submit)
+            PromptBar(prompt, imageMode, working, { prompt = it }, ::listen, ::submit)
         }
     }
 }
@@ -148,9 +215,13 @@ private fun MessageBubble(message: ChatMessage) {
 }
 
 @Composable
-private fun PromptBar(value: String, imageMode: Boolean, working: Boolean, onChange: (String) -> Unit, submit: () -> Unit) {
+private fun PromptBar(value: String, imageMode: Boolean, working: Boolean, onChange: (String) -> Unit, listen: () -> Unit, submit: () -> Unit) {
     Surface(color = Navy.copy(alpha = .98f)) {
         Row(Modifier.navigationBarsPadding().padding(12.dp), verticalAlignment = Alignment.Bottom) {
+            FilledTonalIconButton(onClick = listen, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = DeepNavy)) {
+                Icon(Icons.Rounded.Mic, "Sesle konuş", tint = Gold)
+            }
+            Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = value,
                 onValueChange = onChange,
