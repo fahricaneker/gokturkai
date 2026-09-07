@@ -1,4 +1,4 @@
-# Göktürk 0.2 — Kişisel Asistan
+# Göktürk 0.2.1 — Kişisel Asistan
 
 Türkçe yapay zekâ sohbet uygulamasının ilk sürümü. Android istemcisi Kotlin/Jetpack Compose, çevrimiçi yapay zekâ katmanı Python/FastAPI ve konuşma saklama katmanı Firebase için hazırlanmıştır.
 

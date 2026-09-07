@@ -57,17 +57,35 @@ class MainActivity : FragmentActivity() {
         setContent {
             GokturkTheme {
                 var unlocked by remember { mutableStateOf(false) }
-                if (unlocked) GokturkApp() else OwnerLock { authenticate { unlocked = true } }
-                LaunchedEffect(Unit) { authenticate { unlocked = true } }
+                var lockMessage by remember { mutableStateOf("Parmak izi, yüz veya ekran kilidiyle doğrula") }
+                val requestUnlock = { authenticate({ unlocked = true }, { lockMessage = it }) }
+                if (unlocked) GokturkApp() else OwnerLock(lockMessage, requestUnlock)
+                LaunchedEffect(Unit) { requestUnlock() }
             }
         }
     }
 
-    private fun authenticate(success: () -> Unit) {
+    private fun authenticate(success: () -> Unit, failure: (String) -> Unit) {
         val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        if (BiometricManager.from(this).canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) return
+        when (BiometricManager.from(this).canAuthenticate(authenticators)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> Unit
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                failure("Telefonda parmak izi, yüz tanıma veya ekran kilidi kurulmamış.")
+                return
+            }
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
+                failure("Bu cihazda desteklenen kimlik doğrulama donanımı bulunamadı.")
+                return
+            }
+            else -> {
+                failure("Kimlik doğrulama şu anda kullanılamıyor. Telefon kilidini kontrol et.")
+                return
+            }
+        }
         val prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { success() }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { failure(errString.toString()) }
+            override fun onAuthenticationFailed() { failure("Kimlik eşleşmedi, tekrar deneyebilirsin.") }
         })
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
@@ -80,12 +98,14 @@ class MainActivity : FragmentActivity() {
 }
 
 @Composable
-private fun OwnerLock(unlock: () -> Unit) {
+private fun OwnerLock(message: String, unlock: () -> Unit) {
     Column(Modifier.fillMaxSize().background(DeepNavy).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Surface(Modifier.size(92.dp), shape = CircleShape, color = Turquoise) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Lock, null, tint = Navy, modifier = Modifier.size(42.dp)) } }
         Spacer(Modifier.height(24.dp))
         Text("GÖKTÜRK", color = Cream, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, letterSpacing = 3.sp)
         Text("Yalnızca sahibine özel", color = Gold)
+        Spacer(Modifier.height(10.dp))
+        Text(message, color = Cream.copy(alpha = .75f), fontSize = 13.sp)
         Spacer(Modifier.height(28.dp))
         Button(onClick = unlock, colors = ButtonDefaults.buttonColors(containerColor = Turquoise, contentColor = Navy)) { Text("Kimliğimi doğrula") }
     }
