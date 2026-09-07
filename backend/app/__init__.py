@@ -1,0 +1,1 @@
+"""Göktürk API paketi."""
