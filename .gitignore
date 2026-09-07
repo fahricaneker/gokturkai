@@ -2,7 +2,6 @@
 .gradle/
 **/build/
 android/local.properties
-android/app/google-services.json
 backend/.venv/
 backend/.env
 __pycache__/

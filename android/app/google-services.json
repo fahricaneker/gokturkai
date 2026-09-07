@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "396186637415",
+    "project_id": "gokturkai-67b24",
+    "storage_bucket": "gokturkai-67b24.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:396186637415:android:7fe8814433f09b376f70c2",
+        "android_client_info": {
+          "package_name": "com.gokturk.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUQET2Xs43cFSvjYWnUVEoqGTkHNHSwHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

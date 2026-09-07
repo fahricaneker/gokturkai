@@ -32,15 +32,15 @@ uvicorn app.main:app --reload
 
 ### Android
 
-`android/app/src/main/java/com/gokturk/ai/AppConfig.kt` içindeki `API_BASE_URL` değerini HTTPS API adresinizle değiştirin. Android Studio ile `android` klasörünü açın.
+Firebase Android yapılandırması projeye eklenmiştir. `android/app/src/main/java/com/gokturk/ai/AppConfig.kt` içindeki `API_BASE_URL` değerini HTTPS API adresinizle değiştirin. Android Studio ile `android` klasörünü açın.
 
 ### GitHub üzerinden APK
 
-Depo GitHub'a gönderildiğinde **Actions → Android APK → Run workflow** ile derleme başlatılabilir. Oluşan `app-debug.apk`, Artifacts bölümünden indirilir. Firebase kullanılacaksa depo secret'ı olarak `GOOGLE_SERVICES_JSON_BASE64` eklenebilir.
+Depo GitHub'a gönderildiğinde **Actions → Android APK → Run workflow** ile derleme başlatılabilir. Oluşan `app-debug.apk`, Artifacts bölümünden indirilir.
 
 ## Güvenlik
 
-- `.env`, servis hesabı dosyaları ve `google-services.json` Git'e gönderilmez.
+- `.env` ve Firebase servis hesabı gibi sunucu sırları Git'e gönderilmez. Android `google-services.json` istemci yapılandırmasıdır; erişim Firestore kurallarıyla korunur.
 - Her kullanıcı yalnızca kendi Firestore belgelerini okuyabilir.
 - Üretimde API kimlik doğrulaması, hız sınırı ve App Check eklenmelidir.
 

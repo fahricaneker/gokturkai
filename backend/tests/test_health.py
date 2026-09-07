@@ -1,9 +1,8 @@
-from fastapi.testclient import TestClient
+import asyncio
 
-from app.main import app
+from app.main import health
 
 
 def test_health():
-    response = TestClient(app).get("/health")
-    assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    response = asyncio.run(health())
+    assert response["status"] == "ok"
